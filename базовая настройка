@@ -1,0 +1,33 @@
+hostnamect set-hostname ИМЯ_МАШИНЫ
+
+nano /etc/network/interfaces
+# ПРИМЕР ДЛЯ ISP:
+----------------------------------
+auto ens3
+iface ens3 inet dhcp
+
+auto ens4
+iface ens4 inet static
+        address 10.10.10.10/24
+
+auto ens5
+iface ens5 inet static
+        address 20.20.20.10/24
+---------------------------------
+systemctl restart networking.service
+
+systemctl disable --now apparmor.service # если вам прям ну ОЧЕНЬ мешает фаерволл
+
+apt update && apt install ssh iptables -y
+sed -i "s/#PermitRootLogin prohibit-password/PermitRootLogin yes/g" /etc/ssh/sshd_config # если не хотите лезть в конфиг, можете написать команду
+systemctl restart ssh
+# Далее, желательно залезть на тачку по SSH для возможности копипаста команд
+
+sed -i "s/#net.ipv4.ip_forward=1/net.ipv4.ip_forward=1/g" /etc/sysctl.conf # если не хотите седом, то echo net.ipv4.ip_forward-1 > /etc/sysctl.conf 
+
+iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
+apt install iptables-persistent -y
+
+# Это базовая настройка для ЛЮБОЙ тачки.
+# Для других ПРОМЕЖУТОЧНЫХ тачек вы заменяете Маскарад на OSPF/Статические маршруты, т.к. Маскарад на всё это не круто
+# И не СТАВЬТЕ Маскарад вместе с OSPF/Статич. маршрутами, иначе это шляпа, которая только нагружает тачку
