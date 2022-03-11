@@ -3,3 +3,18 @@
 apt install frr -y
 
 sed -i "s/ospfd=no/ospfd=yes/g" /etc/frr/daemons
+
+vtysh # вход в цископодобную консоль
+
+conf t
+router ospf
+network %АДРЕС_СЕТИ/МАСКА_СЕТИ% area 0 # указываете сети для раздачи соседям
+passive-interface %ИНТЕРФЕЙС% # указываете интерфейсы, на которые не нужно отправлять другие сети
+exit
+exit
+wr mem
+exit
+
+systemctl restart frr
+
+# и так делаете на каждом промежуточной тачке в ветке (в случае нашей лабы на L-FW, L-RTR-A и L-RTR-B)
