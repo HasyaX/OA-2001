@@ -1,0 +1,102 @@
+# Выполнять только после БАЗОВОЙ НАСТРОЙКИ и желательно по SSH :)
+
+apt install bind9 host -y
+
+cd /etc/bind/ # заходим в директорию bind9 для облегчения дальнейшей работы
+
+nano named.conf.options
+------------------------------
+        forwarders {            
+                8.8.8.8;        
+         };                     
+-----------------------------
+# Раскоментить эти строчки и 0.0.0.0 заменить на 8.8.8.8
+nano named.conf.default-zones # Копируем отсюда блок зоны :)
+
+nano named.conf.local # вставляем скопированый блок зоны и редачим. Покажу на примере моей
+-----------------------------------
+zone "goose.local" {                
+        type master;
+        file "/etc/bind/goose.db";  
+};
+----------------------------------
+# вместо "goose.local" название своей зоны
+# вместо "goose.db" название файла для вашей зоны
+
+mv db.local goose.db # прописывайте в случае изменения названия файла
+
+nano goose.db # заходите в файл зоны
+--------------------------------------------------------------
+;                                                             
+; BIND data file for local loopback interface                 
+;                                                             
+$TTL    604800                                                
+@       IN      SOA     goose.local. root.goose.local. (      
+                              2         ; Serial              
+                         604800         ; Refresh             
+                          86400         ; Retry               
+                        2419200         ; Expire              
+                         604800 )       ; Negative Cache TTL  
+;                                                           
+@       IN      NS      L-SRV.goose.local.
+L-SRV   IN      A       172.16.20.10
+L-FW    IN      A       172.16.20.1
+L-RTR-A IN      A       172.16.50.2
+L-RTR-B IN      A       172.16.55.2
+--------------------------------------------------------------  
+# вместо goose.local у вас будет localhost. Нажимаете на Ctrl + \ и, ВНИМАНИЕ, заменяете на СВОЮ зону.
+# в NS записи перед названием зоны ОБЯЗАТЕЛЬНО писать хостнейм САМОГО DNS сервера.
+# на счёт серийника - заменять или нет, ваше решение.
+
+nano /etc/resolv.conf
+---------------------
+search goose.local
+nameserver 127.0.0.1
+---------------------
+# опять же, название моей зоны на своё :)
+
+
+systemctl restart bind9
+rndc reload
+
+host L-SRV # если после данной команды выдаёт адрес написаного хоста, то поздравляю, обратная зона настроена :)
+
+# сейчас я скину конфиги для обратной зоны, делается также
+
+# полный конфиг named.conf.local
+-------------------------------------
+zone "goose.local" {
+        type master;
+        file "/etc/bind/goose.db";
+};
+
+zone "16.172.in-addr.arpa" {
+        type master;
+        file "/etc/bind/172.db";
+};
+------------------------------------
+
+# содержимое 172.db
+--------------------------------------------------------------
+;
+; BIND reverse data file for local loopback interface
+;
+$TTL    604800
+@       IN      SOA     goose.local. root.goose.local. (
+                              1         ; Serial
+                         604800         ; Refresh
+                          86400         ; Retry
+                        2419200         ; Expire
+                         604800 )       ; Negative Cache TTL
+;
+@       IN      NS      L-SRV.goose.local.
+10.20   IN      PTR     L-SRV.goose.local.  
+1.20    IN      PTR     L-FW.goose.local
+2.50    IN      PTR     L-RTR-A.goose.local.
+2.55    IN      PTR     L-RTR-B.goose.local.
+-------------------------------------------------------------
+
+systemctl restart bind9
+rndc reload
+
+host 172.16.20.10 # выдало FQDN указаного адреса? Поздравляю, обратная зона готова :)
