@@ -1,7 +1,8 @@
-hostnamect set-hostname ИМЯ_МАШИНЫ
+# ПРИМЕР ДЛЯ ISP. НА ДРУГИЕ ТАЧКИ ДРУГОЙ НЕЙМ И АДРЕСА
+
+hostnamectl set-hostname ISP
 
 nano /etc/network/interfaces
-# ПРИМЕР ДЛЯ ISP:
 ----------------------------------
 auto ens3
 iface ens3 inet dhcp
